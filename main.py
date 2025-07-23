@@ -1,13 +1,15 @@
-
 import asyncio
 import logging
 import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message
 from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from database import init_db, save_geo, get_random_geo, get_all_geo, save_fact, get_all_facts, get_random_fact, delete_fact
+from database import (
+    init_db, save_geo, get_random_geo, get_all_geo,
+    save_fact, get_all_facts, get_random_fact, delete_fact
+)
 from geo_utils import extract_geo_from_photo
 from scheduler import schedule_daily_post
 from config import TELEGRAM_TOKEN, CHANNEL_ID
@@ -23,25 +25,19 @@ async def start(message: Message):
 @dp.message(Command("help"))
 async def help_cmd(message: Message):
     await message.answer(
-        "<b>📜 Мої команди:</b>
-"
-        "/geo — надіслати випадкові координати
-"
-        "/listgeo — показати збережені координати
-"
-        "/addfact <текст> — додати історію
-"
-        "/listfacts — всі історії
-"
-        "/deletefact <id> — видалити історію"
+        """<b>📜 Мої команди:</b>
+/geo — надіслати випадкові координати
+/listgeo — показати збережені координати
+/addfact <текст> — додати історію
+/listfacts — всі історії
+/deletefact <id> — видалити історію"""
     )
 
 @dp.message(Command("geo"))
 async def geo_cmd(message: Message):
     coord = await get_random_geo()
     if coord:
-        await message.answer(f"🗺️ Випадкові координати:
-https://maps.google.com/?q={coord}")
+        await message.answer(f"🗺️ Випадкові координати:\nhttps://maps.google.com/?q={coord}")
     else:
         await message.answer("База координат порожня.")
 
@@ -51,8 +47,7 @@ async def list_geo(message: Message):
     if not coords:
         await message.answer("⛔ Немає збережених координат.")
         return
-    text = "🗺️ Збережені координати:
-"
+    text = "🗺️ Збережені координати:\n"
     for i, c in enumerate(coords, 1):
         text += f"{i}. https://maps.google.com/?q={c}\n"
     await message.answer(text)
@@ -73,8 +68,7 @@ async def list_facts(message: Message):
         await message.answer("База історій порожня.")
         return
     msg = "\n".join([f"{r['id']}. {r['text']}" for r in facts])
-    await message.answer(f"📚 Усі історії:
-{msg}")
+    await message.answer(f"📚 Усі історії:\n{msg}")
 
 @dp.message(Command("deletefact"))
 async def delete_fact_cmd(message: Message):
