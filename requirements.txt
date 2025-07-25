@@ -3,5 +3,5 @@ asyncpg
 exifread
 aiohttp
 apscheduler
-openai
+openai==0.28.1
 python-dotenv
