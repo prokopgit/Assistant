@@ -1,4 +1,3 @@
-
 from apscheduler.triggers.cron import CronTrigger
 from database import get_random_fact
 from aiogram import Bot

@@ -1,4 +1,3 @@
-
 import exifread
 
 def extract_geo_from_photo(path: str):
