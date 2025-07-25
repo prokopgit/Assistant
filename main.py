@@ -26,6 +26,10 @@ scheduler = AsyncIOScheduler()
 async def start(message: Message):
     await message.answer("👋 Привіт! Я Шурфан — твій архео-друг. Напиши /help, щоб дізнатись мої команди.")
 
+@dp.message(Command("ping"))
+async def ping_cmd(message: Message):
+    await message.answer("✅ Бот активний і слухає.")
+
 @dp.message(Command("help"))
 async def help_cmd(message: Message):
     await message.answer(
