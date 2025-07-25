@@ -1,51 +1,66 @@
 import asyncio
 import logging
 import os
+import random
+
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
-from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from database import (
-    init_db, save_geo, get_random_geo, get_all_geo,
-    save_fact, get_all_facts, get_random_fact, delete_fact
-)
+
+from database import init_db, save_geo, get_random_geo, get_all_geo, save_fact, get_all_facts, get_random_fact, delete_fact
 from geo_utils import extract_geo_from_photo
 from scheduler import schedule_daily_post
-from config import TELEGRAM_TOKEN, CHANNEL_ID, OPENAI_API_KEY
+from config import TELEGRAM_TOKEN, CHANNEL_ID, OPENAI_API_KEY, GEMINI_API_KEY
+from gpt_utils import get_smart_reply
 
-bot = Bot(
-    token=TELEGRAM_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
+from aiogram.client.default import DefaultBotProperties
+
+bot = Bot(token=TELEGRAM_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
 
+start_messages = [
+    "👋 Бувай здоров, колего по розкопках!",
+    "🔍 Шурфан на зв’язку! Що сьогодні викопаємо?",
+    "🏺 Я тут, з пилкою й щіткою. Готовий до пригод!",
+    "🗺️ Схоже, хтось шукає скарби? Я допоможу!",
+    "💬 Запитай що хочеш, тільки не чіпай мій ржавий казан!"
+]
+
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer("👋 Привіт! Я Шурфан — твій архео-друг. Напиши /help, щоб дізнатись мої команди.")
+    await message.answer(random.choice(start_messages))
+
+@dp.message(Command("help"))
+async def help_cmd(message: Message):
+    await message.answer(
+        "<b>📜 Мої команди:</b>
+"
+        "/geo — випадкові координати
+"
+        "/listgeo — всі координати
+"
+        "/addfact <текст> — додати історію
+"
+        "/listfacts — всі історії
+"
+        "/deletefact <id> — видалити історію
+"
+        "/ping — перевірити чи я живий"
+    )
 
 @dp.message(Command("ping"))
 async def ping_cmd(message: Message):
     await message.answer("✅ Бот активний і слухає.")
 
-@dp.message(Command("help"))
-async def help_cmd(message: Message):
-    await message.answer(
-        "<b>📜 Мої команди:</b>\n"
-        "/geo — надіслати випадкові координати\n"
-        "/listgeo — показати збережені координати\n"
-        "/addfact <текст> — додати історію\n"
-        "/listfacts — всі історії\n"
-        "/deletefact <id> — видалити історію"
-    )
-
 @dp.message(Command("geo"))
 async def geo_cmd(message: Message):
     coord = await get_random_geo()
     if coord:
-        await message.answer(f"🗺️ Випадкові координати:\nhttps://maps.google.com/?q={coord}")
+        await message.answer(f"🗺️ Випадкові координати:
+https://maps.google.com/?q={coord}")
     else:
         await message.answer("База координат порожня.")
 
@@ -55,9 +70,11 @@ async def list_geo(message: Message):
     if not coords:
         await message.answer("⛔ Немає збережених координат.")
         return
-    text = "🗺️ Збережені координати:\n"
+    text = "🗺️ Збережені координати:
+"
     for i, c in enumerate(coords, 1):
-        text += f"{i}. https://maps.google.com/?q={c}\n"
+        text += f"{i}. https://maps.google.com/?q={c}
+"
     await message.answer(text)
 
 @dp.message(Command("addfact"))
@@ -75,8 +92,11 @@ async def list_facts(message: Message):
     if not facts:
         await message.answer("База історій порожня.")
         return
-    msg = "\n".join([f"{r['id']}. {r['text']}" for r in facts])
-    await message.answer(f"📚 Усі історії:\n{msg}")
+    msg = "
+
+".join([f"{r['id']}. {r['text']}" for r in facts])
+    await message.answer(f"📚 Усі історії:
+{msg}")
 
 @dp.message(Command("deletefact"))
 async def delete_fact_cmd(message: Message):
@@ -104,30 +124,10 @@ async def handle_photo(message: Message):
     else:
         await message.answer("❌ Не знайдено координат у цьому фото.")
 
-@dp.message()
+@dp.message(F.text)
 async def gpt_reply(message: Message):
-    if not OPENAI_API_KEY:
-        await message.answer("❌ GPT недоступний (не вказано ключ API).")
-        return
-
-    try:
-        import openai
-        openai.api_key = OPENAI_API_KEY
-        user_input = message.text.strip()
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Ти гумористичний український археолог-селянин з металошукачем. Відповідай з жартами, простими словами, ніби балакаєш біля розритої ями. Не будь формальним. Додай трохи шарму, трохи іронії, але залишайся розумним."},
-                {"role": "user", "content": user_input}
-            ],
-            max_tokens=400,
-            temperature=0.9
-        )
-        reply = response.choices[0].message.content.strip()
-        await message.answer(f"⚱️ {reply}")
-    except Exception as e:
-        print("GPT error:", e)
-        await message.answer("🥔 Та шось пішло не так із тими нейромережами...")
+    reply = await get_smart_reply(message.text)
+    await message.answer(reply)
 
 async def main():
     await init_db()
