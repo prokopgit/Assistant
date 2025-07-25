@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from database import (
     init_db, save_geo, get_random_geo, get_all_geo,
@@ -14,7 +15,10 @@ from geo_utils import extract_geo_from_photo
 from scheduler import schedule_daily_post
 from config import TELEGRAM_TOKEN, CHANNEL_ID, OPENAI_API_KEY
 
-bot = Bot(token=TELEGRAM_TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(
+    token=TELEGRAM_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
 
